@@ -1,0 +1,69 @@
+# ============================================================
+# 节点回滚矩阵
+# ============================================================
+# 规则：
+#   1. 每个节点失败时，精确回退到哪个节点
+#   2. 定义不同失败级别的不同回退策略
+#   3. 记录回滚次数，超过阈值触发人工介入
+# ============================================================
+
+rollback_rules:
+  # T1 失败
+  T1:
+    P0_failure: T0      # 严重问题回需求澄清
+    P1_failure: T1      # 一般问题留在当前节点修复
+
+  # T2 架构设计失败
+  T2:
+    P0_failure: T1      # 技术方案不可行，回退重想
+    P1_failure: T2      # 架构小问题，当前节点修复
+    arch_score_under_60: T1   # 评分太低，整体回退
+
+  # T3 技术设计失败
+  T3:
+    P0_failure: T2      # 设计有本质问题
+    P1_failure: T3      # 局部修复
+
+  # T4.5 契约校验失败
+  T4_5:
+    spec_mismatch: T4   # 前后端各自修复
+    spec_wrong: T2      # 是 Spec 本身设计错了，回 T2
+    coverage_under_50: T4
+
+  # T5 后端完成
+  T5:
+    migration_danger: T4  # Migration 有危险操作
+    test_failure: T4      # 测试不通过
+
+  # T5.5 UI 走查
+  T5_5:
+    P0_ui_issue: T4       # 严重还原度问题，回前端重写
+    P1_ui_issue: T5_5     # 当前节点修复
+
+  # T6 QA 测试
+  T6:
+    critical_bug: T5      # 核心流程 Bug，回开发
+    security_issue: T5    # 安全漏洞
+    performance_issue: T2 # 性能不达标，可能架构问题
+
+  # T7 文档
+  T7:
+    missing_doc: T7       # 缺文档补文档，不回滚
+    quality_low: T7       # 质量差重写，不回滚
+
+  # T8 部署
+  T8:
+    deploy_failure: T6    # 部署失败，回测试环境排查
+    health_check_fail: T6
+
+  # T9 最终评审
+  T9:
+    arch_score_low: T2    # 架构评分太低，回架构阶段
+    security_hole: T6     # 安全漏洞，回测试阶段
+    missing_signoff: T9   # 缺签字，当前节点补
+
+# 回滚计数阈值
+rollback_threshold:
+  same_node_3_times: human_intervention   # 同一节点回滚3次，人工介入
+  total_5_times: emergency_review         # 累计回滚5次，整体复盘
+  total_10_times: stop_pipeline           # 累计回滚10次，暂停流水线

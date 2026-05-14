@@ -1,0 +1,18 @@
+# ============================================================
+# 自动归档配置
+# ============================================================
+
+auto_archive:
+  script: ./scripts/archive-node-docs.sh
+
+  git_integration:
+    auto_commit: true
+    commit_message: "docs: archive {node} documents for {feature} at {date}"
+
+  cleanup:
+    archive_after_days: 90
+    delete_after_days: 180
+
+  index_generation:
+    enabled: true
+    script: ./scripts/generate-doc-index.sh

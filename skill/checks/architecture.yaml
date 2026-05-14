@@ -1,0 +1,61 @@
+# ============================================================
+# 架构健康检查配置
+# ============================================================
+# 对应脚本：./scripts/architecture-health-check.sh
+# ============================================================
+
+architecture_check:
+  enabled: true
+  run_at: [T2, T9]    # T2 和 T9 节点必须跑
+
+  dimensions:
+    dependency_direction:
+      weight: 0.30     # 30% 权重
+      script: check_dependency_direction
+      failure_threshold: 3  # 超过 3 个反向依赖则 P0
+
+    cyclic_dependency:
+      weight: 0.25     # 25% 权重
+      script: check_cyclic_dependency
+      failure_threshold: 2
+
+    module_boundary:
+      weight: 0.20     # 20% 权重
+      script: check_module_boundary
+      failure_threshold: 5
+
+    code_complexity:
+      weight: 0.15     # 15% 权重
+      script: check_complexity_and_debt
+      long_file_threshold: 500  # 超过 500 行算长文件
+
+    tech_debt:
+      weight: 0.10     # 10% 权重
+      fixme_weight: 10
+      todo_weight: 3
+      hack_weight: 15
+
+  scoring:
+    base_score: 100
+    grade_S: 90
+    grade_A: 80
+    grade_B: 70
+    grade_C: 60
+    # < 60 = D
+
+  grade_actions:
+    S:
+      action: pass
+      message: "架构非常健康"
+    A:
+      action: pass_with_warning
+      message: "架构健康，注意监控"
+    B:
+      action: human_confirm
+      message: "存在架构风险，需 TechLead 确认"
+    C:
+      action: human_confirm
+      message: "架构腐化迹象明显，建议优化"
+    D:
+      action: rollback
+      message: "架构腐化严重，必须修复"

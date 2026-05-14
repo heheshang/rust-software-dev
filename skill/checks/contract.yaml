@@ -1,0 +1,19 @@
+# ============================================================
+# API 契约检查配置
+# ============================================================
+# 对应脚本：./scripts/contract-validation.sh
+# ============================================================
+
+contract_validation:
+  enabled: true
+  run_at: [T4.5]
+
+  checks:
+    spec_exists:
+    frontend_types:
+    backend_routes:
+    error_code_consistency:
+
+  thresholds:
+    route_coverage_pass: 90
+    route_coverage_warn: 70

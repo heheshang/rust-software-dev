@@ -1,0 +1,49 @@
+# ============================================================
+# 全栈安全扫描配置
+# ============================================================
+# 对应脚本：./scripts/security-scan.sh
+# ============================================================
+
+security_scan:
+  enabled: true
+  run_at: [T6, T9]
+
+  dimensions:
+    rust_dependency:
+      weight: 0.30
+      script: cargo_audit
+      critical_threshold: 1
+
+    npm_dependency:
+      weight: 0.25
+      script: npm_audit
+      critical_threshold: 1
+
+    hardcoded_secrets:
+      weight: 0.20
+      script: grep_hardcoded_secrets
+      keywords:
+        - password
+        - secret
+        - private_key
+        - api_key
+        - token
+
+    sql_injection:
+      weight: 0.15
+      script: sql_injection_scan
+
+    cors_config:
+      weight: 0.10
+      script: cors_check
+
+  severity_levels:
+    Critical:
+      action: block
+      rollback: true
+    High:
+      action: human_confirm
+    Medium:
+      action: warn
+    Low:
+      action: info

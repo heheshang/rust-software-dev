@@ -1,0 +1,47 @@
+# ============================================================
+# 全局常量定义
+# ============================================================
+# 所有跨模块共享的常量、枚举、配置都放这里
+# 绝对不要在具体节点文件中硬编码重复的值
+# ============================================================
+
+# 节点类型枚举
+node_types:
+  auto:     "全自动执行，无需人工介入"
+  human:    "需要人工完成后触发继续"
+  hybrid:   "部分自动，部分人工评审"
+
+# 严重级别
+severity:
+  P0: "阻塞级 - 必须修复，阻断流程"
+  P1: "严重级 - 本迭代必须修复"
+  P2: "建议级 - 技术债务，择机优化"
+  P3: "提示级 - 可选优化"
+
+# 通过标准阈值
+thresholds:
+  t0_pass: 70          # T0 需求门禁通过分数
+  arch_health_pass: 80 # 架构健康检查通过分数
+  doc_quality_pass: 75 # 文档质量通过分数
+
+# 超时配置（小时）
+timeout:
+  T1: 24    # PRD 撰写
+  T2: 48    # 架构设计
+  T4: 72    # 并行开发
+  T5_5: 12  # UI 走查
+  T6: 24    # QA 测试
+  T9: 24    # 最终评审
+
+# 目录结构
+directories:
+  docs_root: "./docs"
+  prd_docs: "./docs/prd"
+  arch_docs: "./docs/architecture"
+  api_docs: "./docs/api"
+  qa_docs: "./docs/qa"
+  ops_docs: "./docs/operations"
+  t9_docs: "./docs/t9"
+  rfc_docs: "./docs/rfc"
+  scripts: "./scripts"
+  state_file: ".pipeline-state.json"

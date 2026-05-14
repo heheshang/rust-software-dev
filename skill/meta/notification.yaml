@@ -1,0 +1,40 @@
+# ============================================================
+# 通知配置
+# ============================================================
+
+notification:
+  default_channel: feishu
+
+  channels:
+    feishu:
+      type: webhook
+      url_env: FEISHU_WEBHOOK_URL
+
+    dingtalk:
+      type: webhook
+      url_env: DINGTALK_WEBHOOK_URL
+
+  templates:
+    node_start:
+      title: "🚀 流水线进入 {node} 节点"
+      content: "功能: {feature}\n开始时间: {time}\n负责人: {owner}"
+
+    node_complete:
+      title: "✅ {node} 节点完成"
+      content: "耗时: {duration} 分钟\n评分: {score}"
+      at: ["{owner}"]
+
+    node_failed:
+      title: "❌ {node} 节点失败，准备回滚"
+      content: "失败原因: {reason}\n回退到: {rollback_to}"
+      at: ["{owner}", "TechLead"]
+
+    rollback_triggered:
+      title: "🔙 发生回滚"
+      content: "从 {from_node} 回退到 {to_node}\n回滚次数: {count}"
+      at: ["TechLead"]
+
+    pipeline_complete:
+      title: "🎉 流水线全部完成"
+      content: "功能: {feature}\n总耗时: {total_hours} 小时\n可以准备上线了！"
+      at_all: true

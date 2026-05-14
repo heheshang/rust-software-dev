@@ -1,0 +1,42 @@
+# ============================================================
+# 回滚处理逻辑
+# ============================================================
+
+rollback_handler:
+  default_action: pause_and_notify
+
+  actions:
+    pause_and_notify:
+      description: "暂停流水线，通知负责人"
+      steps:
+        - 更新状态为失败
+        - 记录回滚次数
+        - 飞书/钉钉通知负责人
+        - 等待人工确认
+
+    auto_rollback:
+      description: "自动回退到上一个节点"
+      steps:
+        - 更新状态
+        - 切换到上一个节点
+        - 通知
+
+    require_approval:
+      description: "需要审批才能继续"
+      steps:
+        - 暂停
+        - 发起审批流
+        - 审批通过才继续
+
+  escalation_rules:
+    same_node_rollback_3_times:
+      action: escalate_to_techlead
+      message: "同一节点回滚3次，需要架构师介入"
+
+    total_rollback_5_times:
+      action: full_review
+      message: "累计回滚5次，需要整体复盘"
+
+    total_rollback_10_times:
+      action: emergency_stop
+      message: "累计回滚10次，流水线暂停，必须整体重新评估"

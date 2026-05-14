@@ -1,0 +1,29 @@
+# ============================================================
+# 文档质量检查配置
+# ============================================================
+# 对应脚本：./scripts/document-quality-check.sh
+# ============================================================
+
+document_check:
+  enabled: true
+  run_at: [T7]
+
+  required_docs:
+    - README.md
+    - docs/architecture/README.md
+    - docs/api/README.md
+    - CHANGELOG.md
+    - CONTRIBUTING.md
+
+  quality_checks:
+    title_completeness:
+      weight: 0.20
+    metadata_presence:
+      weight: 0.20
+    no_todo_placeholders:
+      weight: 0.30
+    markdown_format:
+      weight: 0.30
+
+  thresholds:
+    pass_score: 75

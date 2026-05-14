@@ -1,0 +1,103 @@
+# ============================================================
+# 节点归档标准
+# ============================================================
+# 每个节点完成后必须归档的文件、命名规范、存储位置
+# 归档 = 团队的集体记忆，人会忘但文件永远在
+# ============================================================
+
+archive_config:
+  date_format: YYYYMMDD
+  timestamp_format: YYYYMMDD-HHMMSS
+  auto_commit: true    # 归档后自动 git commit
+
+# 每个节点的归档清单
+node_archive_list:
+  T0:
+    delay_minutes: 0    # 检查通过后立即归档
+    files:
+      - template: T0-Checklist-DATE.md
+        location: docs/prd/
+        required: true
+      - template: Requirements-Clarification-DATE.md
+        location: docs/prd/
+        required: false
+
+  T1:
+    delay_minutes: 0
+    files:
+      - template: PRD-FEATURE-DATE.md
+        location: docs/prd/
+        required: true
+      - template: Gherkin-Scenarios-DATE.md
+        location: docs/prd/
+        required: true
+      - template: PRD-Review-Notes-DATE.md
+        location: docs/prd/
+        required: false
+
+  T2:
+    delay_minutes: 30   # 等 30 分钟确认无问题再归档
+    files:
+      - template: ADR-NNN-TOPIC-DATE.md
+        location: docs/architecture/
+        required: true
+      - template: OpenAPI-3.0-spec-DATE.yaml
+        location: docs/api/
+        required: true
+      - template: Architecture-Report-DATE.md
+        location: docs/architecture/
+        required: true
+      - template: ER-Diagram-DATE.png
+        location: docs/architecture/
+        required: false
+
+  T4_5:
+    delay_minutes: 0
+    files:
+      - template: Contract-Validation-Report-DATE.md
+        location: docs/api/
+        required: true
+      - template: Change-Impact-Analysis-DATE.md
+        location: docs/api/
+        required: false
+
+  T5_5:
+    delay_minutes: 0
+    files:
+      - template: UI-Review-DATE.md
+        location: docs/qa/
+        required: true
+
+  T6:
+    delay_minutes: 60   # QA 完成后 1 小时归档
+    files:
+      - template: QA-Test-Report-DATE.md
+        location: docs/qa/
+        required: true
+      - template: Security-Scan-Report-DATE.md
+        location: docs/qa/
+        required: true
+      - template: Bug-List-DATE.md
+        location: docs/qa/
+        required: true
+
+  T9:
+    delay_minutes: 0
+    files:
+      - template: Final-Review-Checklist-DATE.md
+        location: docs/t9/
+        required: true
+      - template: Sign-Off-Record-DATE.md
+        location: docs/t9/
+        required: true
+      - template: Release-Note-DATE.md
+        location: docs/t9/
+        required: true
+      - template: Final-Delivery-List-DATE.md
+        location: docs/t9/
+        required: true
+
+# 归档后的清理规则
+cleanup_rules:
+  archive_older_than: 90d    # 90 天前的归档打包
+  delete_older_than: 180d    # 180 天前的可删除
