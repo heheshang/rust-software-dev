@@ -1,31 +1,34 @@
 # 流水线健康检查参考
 
-## Python execute_code 陷阱
+## Kanban DB Schema 速查（2026-05 实测）
 
-`execute_code` 工具中 body 参数含花括号（如 `{symbol}`）会触发 Python f-string 解析错误 `NameError: name 'symbol' is not defined`。
+> `hermes kanban` CLI 不可用时，直接查 `~/.hermes/kanban.db`。
 
+**tasks 表关键列**：id, title, status, assignee, worker_pid, last_heartbeat_at, started_at, consecutive_failures, last_failure_error, workspace_path, body
+
+**注意**：
+- **无 `completed_at` 列** — 任务完成状态存在 `status` 列（'done'|'archived'|'running'|'todo'|'blocked'）
+- **T9 的 `body` 字段含评审结论**（如 `## APPROVED`）— kanban status=done 不等于流水线通过
+- 判断真实状态：结合 `status` + `body` 内容 + git status 交叉验证
+
+**快速查询模板**：
 ```python
-# ❌ 错误 — body 中的 {symbol} 被 Python 解析为 f-string 变量
-body = """...
-- 缓存：Redis 热点K线（key格式：kline:{symbol}:{timeframe}:{ts}）
-..."""
-out = run(f"hermes kanban create ... --body '{body}'")
+import os, sqlite3, time
+db = os.path.expanduser('~/.hermes/kanban.db')
+conn = sqlite3.connect(db)
+conn.row_factory = sqlite3.Row
+cur = conn.cursor()
 
-# ✅ 正确 — 使用 raw string 包裹 body
-body = r"""...
-- 缓存：Redis 热点K线（key格式：kline:{symbol}:{timeframe}:{ts}）
-..."""
-out = run(f"hermes kanban create ... --body '{body}'")
+# 所有流水线任务（按 workspace 筛选）
+cur.execute('''SELECT id, title, status, assignee, last_heartbeat_at
+               FROM tasks WHERE workspace_path LIKE '%quant-trading%'
+               ORDER BY status, id''')
+
+# 单任务详情（含 body 摘要）
+cur.execute("SELECT id, title, status, body FROM tasks WHERE id = ?", (task_id,))
 ```
 
-**规律**：凡是在 f-string `f"..."` 内部传 shell 命令，且 body 内容含 `{}`，一律用 `r"""..."""` 包裹 body。
-
-## Terminal 超时处理
-
-系统负载高时 `hermes kanban list` 可能超时（15s）。连续超时后换策略：
-- 第一次超时：等5秒重试
-- 第二次超时：用 `grep` 管道过滤减少输出量
-- 第三次超时：直接 `hermes kanban show <id>` 单条查询
+---
 
 ## 卡住检测逻辑
 
@@ -41,6 +44,8 @@ out = run(f"hermes kanban create ... --body '{body}'")
   > 3 个卡住任务 → 告警: "流水线阻塞，请检查"
   ≤ 3 个 → 列出每个卡住任务 + 持续时间
 ```
+
+---
 
 ## blocked 原因速查
 
@@ -102,6 +107,8 @@ done
 - 结果：T7/T8/T9 全部以 `protocol_violation` 崩溃告终
 - **教训**：summary 声称产出 ≠ 产出实际存在，E7 恢复必须交叉验证
 
+---
+
 ## 质量门快速检查
 
 ```
@@ -131,6 +138,8 @@ T8 DevOps:
   docker ps                     →  healthcheck 全 green
 ```
 
+---
+
 ## 批量迁移 Worker Profile 模型
 
 当所有 worker 返回 401 时，执行批量迁移：
@@ -155,6 +164,8 @@ hermes profile list
 > **当前模型**: glm-5.1 (provider: custom, base_url: https://ark.cn-beijing.volces.com/api/coding/v1, api_type: openai)
 > 历史: DeepSeek-v4-flash (2026-05-13 失效, 401) → glm-5.1/ark (过渡) → MiniMax-M2.7 → glm-5.1/custom (当前)
 > ⚠ Profile 名称是 `pm` 不是 `rust-pm`，`tech-lead` 不是 `rust-tech-lead`，以此类推
+
+---
 
 ## E9: T9 done/archived 状态 ≠ APPROVED（流水线实质阻塞）
 
@@ -229,6 +240,8 @@ Pipeline: <name> | 总任务: 10 | 完成: 3 | 进行中: 4 | 阻塞: 2
 ⚠ 卡住任务: T4 (22min), T5 (35min) → 流水线轻微阻塞
 ```
 
+---
+
 ## Docker 前端重新部署
 
 > `docker compose up -d` 可能被 terminal 工具误判为长驻进程而拒绝执行。变通方案：
@@ -261,3 +274,48 @@ docker run -d --name quant-frontend --network quant-trading-network -p 8081:80 q
 # 4. 验证
 sleep 5 && curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/
 ```
+
+---
+
+## delegate_task 启动节点模板
+
+启动 worker 前先确认任务 ID，避免重复创建：
+
+**delegate_task JSON 模板**：
+```json
+{
+  "context": "workspace=/home/ssk/workspace/quant-trading\nskill=rust-software-dev\n节点=T3\n功能=交易执行模块",
+  "goal": "完整描述 + 参考文档路径 + 产出目录 + 完成后 kanban_complete",
+  "role": "leaf",
+  "toolsets": ["terminal", "file", "web"]
+}
+```
+
+**常用任务 ID（quant-trading）**：
+| 节点 | 任务 ID | 状态 |
+|------|---------|------|
+| T3 UI设计 | t_abc8efb8 | ✅ done（已产出 Design_TradingExecution.md） |
+| T4 前端实现 | 新建 | — |
+| T5 后端实现 | 新建 | — |
+
+---
+
+## Python execute_code 陷阱
+
+`execute_code` 工具中 body 参数含花括号（如 `{symbol}`）会触发 Python f-string 解析错误 `NameError: name 'symbol' is not defined`。
+
+```python
+# ❌ 错误 — body 中的 {symbol} 被 Python 解析为 f-string 变量
+body = """...
+- 缓存：Redis 热点K线（key格式：kline:{symbol}:{timeframe}:{ts}）
+..."""
+out = run(f"hermes kanban create ... --body '{body}'")
+
+# ✅ 正确 — 使用 raw string 包裹 body
+body = r"""...
+- 缓存：Redis 热点K线（key格式：kline:{symbol}:{timeframe}:{ts}）
+..."""
+out = run(f"hermes kanban create ... --body '{body}'")
+```
+
+**规律**：凡是在 f-string `f"..."` 内部传 shell 命令，且 body 内容含 `{}`，一律用 `r"""..."""` 包裹 body。

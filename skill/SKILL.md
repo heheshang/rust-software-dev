@@ -25,6 +25,7 @@ imports:
   - "./nodes/T3.md"
   - "./nodes/T4.md"
   - "./nodes/T4.5.md"
+  - "./nodes/T4.6.md"
   - "./nodes/T5.md"
   - "./nodes/T5.5.md"
   - "./nodes/T6.md"
@@ -50,7 +51,8 @@ dependency_graph:
   T2:   [T3]
   T3:   [T4]
   T4:   [T4.5]
-  T4.5: [T5]
+  T4.5: [T4.6]
+  T4.6: [T5]
   T5:   [T5.5]
   T5.5: [T6]
   T6:   [T7]

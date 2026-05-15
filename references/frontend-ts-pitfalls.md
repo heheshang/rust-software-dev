@@ -139,4 +139,70 @@ export type WsMessageType = 'ticker' | 'depth' | 'depth_update' | 'heartbeat' | 
 export type WsMessageType = 'ticker' | 'depth' | 'depth_update' | 'kline' | 'heartbeat' | 'subscribed' | 'unsubscribed' | 'kick' | 'error'
 ```
 
+**防御方法**: 使用常量集中管理符号，避免字面量拼写：
+```ts
+// constants/symbols.ts
+export const SUPPORTED_SYMBOLS = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'SOLUSDT', 'XRPUSDT', 'DOGEUSDT', 'ADAUSDT', 'AVAXUSDT', 'DOTUSDT', 'LINKUSDT'] as const
+subscribe(SUPPORTED_SYMBOLS.map(s => `ticker:${s}`))
+```
+
 **规律**: 当前后端 WS 新增消息类型时，必须同步检查 `frontend/src/types/market.ts` 中的 `WsMessageType`。
+
+---
+
+## 9. Vue 组件数据管理模式冲突（内部自管理 vs 外部传入）
+
+**症状**: 组件有两种不同的 composition 风格导致接口不兼容：
+- **外部传入模式**: 父组件通过 `props` 传入数据（`trades`, `total`, `loading`），组件仅负责展示和分页事件上报
+- **内部自管理模式**: 组件内部 `ref` 管理数据，自己调用 API `fetchTrades()`，props 只用于配置（如 `defaultSymbol`）
+
+**冲突场景**: T4 frontend worker 超时后产出了 `trade/TradeRecordTab.vue`（内部自管理，385行），但 `TradingView.vue` 和 `OrderManagementView.vue` 使用的是**外部传入模式**调用方式（传入 `:trades="trades" :total="tradesTotal"` 等 props）。
+
+**判断方法**:
+```ts
+// 外部传入模式 — defineProps 包含 trades/total/loading 等数据型 props
+const props = withDefaults(defineProps<{
+  trades?: Trade[]
+  total?: number
+  page?: number
+  size?: number
+  loading?: boolean
+}>(), { ... })
+
+// 内部自管理模式 — props 只有配置项，数据通过 ref+API内部获取
+const props = withDefaults(defineProps<{
+  defaultSymbol?: string   // ← 配置型 prop
+}>(), { ... })
+const trades = ref<Trade[]>([])  // ← 内部自己管理
+```
+
+**修复流程**:
+1. `git checkout` 恢复旧版（外部传入模式）
+2. 删除 worker 产出的内部自管理版本
+3. 修正 import 路径指向恢复后的文件
+4. 验证父组件的 props 传递与子组件 `defineProps` 匹配
+
+**预防**: 前端 worker 任务应明确指定组件的数据管理模式（外部传入优先，与后端 API 对齐）。
+
+---
+
+## 10. 前端 Subagent 超时后的清理检查清单
+
+Frontend worker 超时（默认 600s）后，需要手动执行以下检查：
+
+```
+□ git status --short frontend/src/          # 查看所有变更文件
+□ wc -l <file>                              # 确认行数是否符合预期
+□ grep -n "defineProps\|props\|ref\|onMounted\|onUnmounted" <file>  # 验证完整性
+□ grep "import.*from" <file>                # 检查是否有悬空的 import
+□ git diff --stat                           # 变更量是否合理（如 TradingView.vue 230→645行）
+□ 修复 import 路径冲突（同名组件在不同目录）
+□ 合并重复文件（保留符合调用方接口的版本）
+□ git add + git commit                      # 手动提交
+```
+
+**常见超时产出特征**:
+- 核心文件行数大幅增长但未 commit
+- 存在 `??` 标记的新文件（untracked）
+- 同一组件有多个版本存在于不同目录
+- 组件内可能有悬空 import（worker 被中断在 import 语句中间）
